@@ -1,0 +1,281 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>East West Traffic Isolation &#8212; ovn domain service 0.0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <p>The following user guide outlines the steps to utilize the API in order to establish East-West Connectivity between Data Processing Units (DPUs) and tenant isolation</p>
+<section id="east-west-traffic-isolation">
+<h1>East West Traffic Isolation<a class="headerlink" href="#east-west-traffic-isolation" title="Permalink to this headline">¶</a></h1>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this headline">¶</a></h2>
+<dl class="simple">
+<dt>Deployment</dt><dd><p>Ensure you have deployed the system comprising the control plane, DPU and compute nodes. For the deployment procedure, refer to the OVN
+<cite>Isolation Deployment guide &lt;https://gitlab-master.nvidia.com/sdn/ovn-isolation-deployment&gt;</cite>.</p>
+</dd>
+</dl>
+<p>Setup grpc:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">wget</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">fullstorydev</span><span class="o">/</span><span class="n">grpcurl</span><span class="o">/</span><span class="n">releases</span><span class="o">/</span><span class="n">download</span><span class="o">/</span><span class="n">v1</span><span class="mf">.8.9</span><span class="o">/</span><span class="n">grpcurl_1</span><span class="mf">.8.9</span><span class="n">_linux_x86_64</span><span class="o">.</span><span class="n">tar</span><span class="o">.</span><span class="n">gz</span>
+<span class="n">tar</span> <span class="o">-</span><span class="n">xvzf</span> <span class="n">grpcurl_1</span><span class="mf">.8.9</span><span class="n">_linux_x86_64</span><span class="o">.</span><span class="n">tar</span><span class="o">.</span><span class="n">gz</span>
+<span class="n">mv</span> <span class="n">grpcurl</span> <span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">local</span><span class="o">/</span><span class="nb">bin</span><span class="o">/</span>
+<span class="ow">or</span>
+<span class="n">go</span> <span class="n">install</span> <span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">fullstorydev</span><span class="o">/</span><span class="n">grpcurl</span><span class="o">/</span><span class="n">cmd</span><span class="o">/</span><span class="n">grpcurl</span><span class="nd">@latest</span>
+</pre></div>
+</div>
+<p>From the Control-Plane node, check you can reach the service and list endpoints:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>OVN_DOMAIN_SVC=localhost
+
+grpcurl -plaintext ${OVN_DOMAIN_SVC}:5067 list ovnisolation.OVNIsolation
+</pre></div>
+</div>
+</section>
+<section id="domain-isolation-east-west-connectivity">
+<h2>Domain Isolation - East West Connectivity<a class="headerlink" href="#domain-isolation-east-west-connectivity" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="use-case">
+<h2>Use case<a class="headerlink" href="#use-case" title="Permalink to this headline">¶</a></h2>
+<p>describing a use case where an administrator intends to establish a network for 4 VMs, VM1-VM4, two domains, each domain with 2 virtual machines.</p>
+<p>First domain contains VM1 and VM3 each under different network segments.</p>
+<p>Second domain contains VM2 and VM4 under the same network segment.</p>
+<p>VM1 and VM2 are hosted on DPU-A.</p>
+<p>VM3 and VM4 are hosted on DPU-B.</p>
+<p>The goal is to enable network connectivity and data transfer between VM1 and VM3, VM2 and VM4 using the appropriate API calls.</p>
+<p>## Partial API diagram used</p>
+<p>![image](/uploads/420ca085d00d695089429444a55eeca9/image.png)</p>
+</section>
+<section id="solution">
+<h2>Solution<a class="headerlink" href="#solution" title="Permalink to this headline">¶</a></h2>
+<p>assuming all the VMs/network namespaces existing on the x86 host and thier corresponding interface representors connected to OVS bridge.
+on the deployment we should have 2 vfs on each x86 host.
+on each DPU we should have two interface reperesontors connected to ovs bridge br-int.</p>
+</section>
+<section id="create-two-domains-domain-red-and-domain-blue">
+<h2>Create two domains: <cite>domain-red</cite> and <cite>domain-blue</cite><a class="headerlink" href="#create-two-domains-domain-red-and-domain-blue" title="Permalink to this headline">¶</a></h2>
+<p><cite>domain-red</cite> will contain VM1 and VM3
+<cite>domain-blue</cite> will contain VM2 and VM4</p>
+<p>![image](/uploads/c3811a6674021c8ff3c057bf96303ffc/image.png)</p>
+<dl class="simple">
+<dt>::</dt><dd><p>grpcurl -plaintext -d ‘{“name”:”domain-red”}’ ${OVN_DOMAIN_SVC}:5067  ovnisolation.OVNIsolation/CreateDomain
+grpcurl -plaintext -d ‘{“name”:”domain-blue”}’ ${OVN_DOMAIN_SVC}:5067  ovnisolation.OVNIsolation/CreateDomain</p>
+</dd>
+</dl>
+</section>
+<section id="for-domain-domain-red-create-two-network-segments">
+<h2>For domain <cite>domain-red</cite> create two network segments<a class="headerlink" href="#for-domain-domain-red-create-two-network-segments" title="Permalink to this headline">¶</a></h2>
+<p>specify a unique name for the network segment, subnet of the network segment,
+the domain it is attached to and routed to true to enable connectivity between the
+network segments under the same domain:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>grpcurl -plaintext -d &#39;{&quot;name&quot;:&quot;ns1&quot;, &quot;domain&quot;: &quot;domain-red&quot;, &quot;subnet&quot;: &quot;192.168.0.0/24&quot;, &quot;routed&quot;:true}&#39; ${OVN_DOMAIN_SVC}:5067  ovnisolation.OVNIsolation/CreateNetworkSegment
+grpcurl -plaintext -d &#39;{&quot;name&quot;:&quot;ns2&quot;, &quot;domain&quot;: &quot;domain-red&quot;, &quot;subnet&quot;: &quot;192.168.1.0/24&quot;, &quot;routed&quot;:true}&#39; ${OVN_DOMAIN_SVC}:5067  ovnisolation.OVNIsolation/CreateNetworkSegment
+</pre></div>
+</div>
+</section>
+<section id="for-domain-domain-blue-create-a-single-network-segment">
+<h2>For domain <cite>domain-blue</cite> create a single network segment<a class="headerlink" href="#for-domain-domain-blue-create-a-single-network-segment" title="Permalink to this headline">¶</a></h2>
+<p>specify a unique name for the network segment, subnet of the network segment,
+the domain it is attached to, default value of routed is false as we don’t have any other network segments
+under <cite>domain-blue</cite>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>grpcurl -plaintext -d &#39;{&quot;name&quot;:&quot;ns3&quot;, &quot;domain&quot;: &quot;domain-blue&quot;, &quot;subnet&quot;: &quot;10.152.0.0/16&quot;}&#39; ${OVN_DOMAIN_SVC}:5067  ovnisolation.OVNIsolation/CreateNetworkSegment
+</pre></div>
+</div>
+<p>create two DPUs: <cite>DPU-A</cite> and <cite>DPU-B</cite>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>grpcurl -plaintext -d &#39;{&quot;name&quot;:&quot;DPU-A&quot;}&#39; ${OVN_DOMAIN_SVC}:5067  ovnisolation.OVNIsolation/CreateDPU
+grpcurl -plaintext -d &#39;{&quot;name&quot;:&quot;DPU-B&quot;}&#39; ${OVN_DOMAIN_SVC}:5067  ovnisolation.OVNIsolation/CreateDPU
+</pre></div>
+</div>
+</section>
+<section id="create-interfaces-and-interface-config-for-each-vm">
+<h2>Create interfaces and interface config for each VM<a class="headerlink" href="#create-interfaces-and-interface-config-for-each-vm" title="Permalink to this headline">¶</a></h2>
+<p>MAC_H1PF0VF0=[VM1 vf0 mac address on first x86 host]</p>
+<p>MAC_H1PF0VF1=[VM2 vf1 mac address on first x86 host]</p>
+<p>MAC_H2PF0VF0=[VM3 vf0 mac address on second x86 host]</p>
+<p>MAC_H2PF0VF1=[VM4 vf1 mac address on second x86 host]</p>
+<blockquote>
+<div><ul>
+<li><p>Interface on DPU-A:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>#pf0vf0
+grpcurl -plaintext -d &#39;{&quot;name&quot;:&quot;h1pf0vf0&quot;, &quot;dpu&quot;:&quot;DPU-A&quot;, &quot;mac_address&quot;:&quot;${MAC_H1PF0VF0}&quot;, &quot;pf_id&quot;:&quot;0&quot;}&#39; ${OVN_DOMAIN_SVC}:5067  ovnisolation.OVNIsolation/CreateInterface
+
+# Note the name here, this is the name we gave in the external_ids for the port in OVS
+# interface that is attached to VM1
+grpcurl -plaintext -d &#39;{&quot;name&quot;:&quot;bf1pf0vf0&quot;, &quot;interface&quot;:&quot;h1pf0vf0&quot;, &quot;dpu&quot;:&quot;DPU-A&quot;, &quot;segment&quot;:&quot;ns1&quot;, &quot;address&quot;:&quot;192.168.0.2&quot;}&#39; ${OVN_DOMAIN_SVC}:5067  ovnisolation.OVNIsolation/CreateInterfaceConfig
+
+#pf0vf1
+grpcurl -plaintext -d &#39;{&quot;name&quot;:&quot;h1pf0vf1&quot;, &quot;dpu&quot;:&quot;DPU-A&quot;, &quot;mac_address&quot;:&quot;${MAC_H1PF0VF1}&quot;, &quot;pf_id&quot;:&quot;0&quot;}&#39; ${OVN_DOMAIN_SVC}:5067  ovnisolation.OVNIsolation/CreateInterface
+
+# Note the segment is ns3 as it will be used by VM2
+grpcurl -plaintext -d &#39;{&quot;name&quot;:&quot;bf1pf0vf1&quot;, &quot;interface&quot;:&quot;h1pf0vf1&quot;, &quot;dpu&quot;:&quot;DPU-A&quot;, &quot;segment&quot;:&quot;ns3&quot;, &quot;address&quot;:&quot;10.152.0.2&quot;}&#39; ${OVN_DOMAIN_SVC}:5067  ovnisolation.OVNIsolation/CreateInterfaceConfig
+</pre></div>
+</div>
+</li>
+<li><p>Interface on DPU-B:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>#pf0vf0
+grpcurl -plaintext -d &#39;{&quot;name&quot;:&quot;h2pf0vf0&quot;, &quot;dpu&quot;:&quot;DPU-B&quot;, &quot;mac_address&quot;:&quot;${MAC_H2PF0VF0}&quot;, &quot;pf_id&quot;:&quot;0&quot;}&#39; ${OVN_DOMAIN_SVC}:5067  ovnisolation.OVNIsolation/CreateInterface
+
+# interface that will be attached to VM3
+grpcurl -plaintext -d &#39;{&quot;name&quot;:&quot;bf2pf0vf0&quot;, &quot;interface&quot;:&quot;h2pf0vf0&quot;, &quot;dpu&quot;:&quot;DPU-B&quot;, &quot;segment&quot;:&quot;ns2&quot;, &quot;address&quot;:&quot;192.168.1.2&quot;}&#39; ${OVN_DOMAIN_SVC}:5067  ovnisolation.OVNIsolation/CreateInterfaceConfig
+
+#pf0vf1
+grpcurl -plaintext -d &#39;{&quot;name&quot;:&quot;h2pf0vf1&quot;, &quot;dpu&quot;:&quot;DPU-B&quot;, &quot;mac_address&quot;:&quot;${MAC_H2PF0VF1}&quot;, &quot;pf_id&quot;:&quot;0&quot;}&#39; ${OVN_DOMAIN_SVC}:5067  ovnisolation.OVNIsolation/CreateInterface
+
+# Note the segment is ns3 as it will be used by VM4
+grpcurl -plaintext -d &#39;{&quot;name&quot;:&quot;bf2pf0vf1&quot;, &quot;interface&quot;:&quot;h2pf0vf1&quot;, &quot;dpu&quot;:&quot;DPU-B&quot;, &quot;segment&quot;:&quot;ns3&quot;, &quot;address&quot;:&quot;10.152.0.3&quot;}&#39; ${OVN_DOMAIN_SVC}:5067  ovnisolation.OVNIsolation/CreateInterfaceConfig
+</pre></div>
+</div>
+</li>
+</ul>
+</div></blockquote>
+</section>
+<section id="simulation-vms">
+<h2>simulation VMs<a class="headerlink" href="#simulation-vms" title="Permalink to this headline">¶</a></h2>
+<p>To simulate the VMs we can create network namespaces on hosts, you should be able to use the VFs inside the network namespaces and talk to other interfaces under the same domain.</p>
+<p>on first x86 host create two network namespaces to represent VM1 and VM2:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>VM=vm1
+GW=192.168.0.1
+VF=pf0vf0
+IP=192.168.0.2/24
+ip netns add $VM
+ip link set $VF netns $VM
+ip netns exec $VM ip addr add $IP dev $VF
+ip netns exec $VM ip link set $VF up
+ip netns exec $VM ip route add default via $GW
+
+VM=vm2
+GW=10.152.0.1
+VF=pf0vf1
+IP=10.152.0.2/16
+ip netns add $VM
+ip link set $VF netns $VM
+ip netns exec $VM ip addr add $IP dev $VF
+ip netns exec $VM ip link set $VF up
+ip netns exec $VM ip route add default via $GW
+</pre></div>
+</div>
+<p>on second x86 host create two network namespaces to represent VM3 and VM4:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>VM=vm3
+GW=192.168.1.1
+VF=pf0vf0
+IP=192.168.1.2/24
+ip netns add $VM
+ip link set $VF netns $VM
+ip netns exec $VM ip addr add $IP dev $VF
+ip netns exec $VM ip link set $VF up
+ip netns exec $VM ip route add default via $GW
+
+VM=vm4
+GW=10.152.0.1
+VF=pf0vf1
+IP=10.152.0.3/16
+ip netns add $VM
+ip link set $VF netns $VM
+ip netns exec $VM ip addr add $IP dev $VF
+ip netns exec $VM ip link set $VF up
+ip netns exec $VM ip route add default via $GW
+</pre></div>
+</div>
+<p>Testing traffic between VM1 and VM3, from the first x86 host:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ip</span> <span class="n">netns</span> <span class="n">exec</span> <span class="n">vm1</span> <span class="n">ping</span> <span class="mf">192.168.1.2</span>
+</pre></div>
+</div>
+<p>Testing traffic between VM2 and VM4, from the first x86 host:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ip</span> <span class="n">netns</span> <span class="n">exec</span> <span class="n">vm2</span> <span class="n">ping</span> <span class="mf">10.152.0.3</span>
+</pre></div>
+</div>
+<p>Verify there is connectivity between VM1 to VM2 as they exist on different domains:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ip</span> <span class="n">netns</span> <span class="n">exec</span> <span class="n">vm1</span> <span class="n">ping</span> <span class="mf">10.152.0.2</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">ovn domain service</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2024, Tarek Abu-Hariri.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.3.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/user-guide/east_west_traffic_config.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
