@@ -6,7 +6,8 @@ East West Traffic Isolation
 
 **Create interfaces and interface config for each VM**
 
- ::
+ - get VFs MAC addresses::
+
     MAC_H1PF0VF0=[VM1 vf0 mac address on first x86 host]
 
     MAC_H1PF0VF1=[VM2 vf1 mac address on first x86 host]
