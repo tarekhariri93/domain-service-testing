@@ -4,6 +4,32 @@ The following user guide outlines the steps to utilize the API in order to estab
 East West Traffic Isolation
 ==============================
 
+**Create interfaces and interface config for each VM**
+
+    ::
+        MAC_H1PF0VF0=[VM1 vf0 mac address on first x86 host]
+
+        MAC_H1PF0VF1=[VM2 vf1 mac address on first x86 host]
+
+        MAC_H2PF0VF0=[VM3 vf0 mac address on second x86 host]
+
+        MAC_H2PF0VF1=[VM4 vf1 mac address on second x86 host]
+
+ - Interface on DPU-A::
+
+        #pf0vf0
+        grpcurl -plaintext -d '{"name":"h1pf0vf0", "dpu":"DPU-A", "mac_address":"${MAC_H1PF0VF0}", "pf_id":"0"}' ${OVN_DOMAIN_SVC}:5067  ovnisolation.OVNIsolation/CreateInterface
+
+        # Note the name here, this is the name we gave in the external_ids for the port in OVS
+        # interface that is attached to VM1
+        grpcurl -plaintext -d '{"name":"bf1pf0vf0", "interface":"h1pf0vf0", "dpu":"DPU-A", "segment":"ns1", "address":"192.168.0.2"}' ${OVN_DOMAIN_SVC}:5067  ovnisolation.OVNIsolation/CreateInterfaceConfig
+
+        #pf0vf1
+        grpcurl -plaintext -d '{"name":"h1pf0vf1", "dpu":"DPU-A", "mac_address":"${MAC_H1PF0VF1}", "pf_id":"0"}' ${OVN_DOMAIN_SVC}:5067  ovnisolation.OVNIsolation/CreateInterface
+
+        # Note the segment is ns3 as it will be used by VM2
+        grpcurl -plaintext -d '{"name":"bf1pf0vf1", "interface":"h1pf0vf1", "dpu":"DPU-A", "segment":"ns3", "address":"10.152.0.2"}' ${OVN_DOMAIN_SVC}:5067  ovnisolation.OVNIsolation/CreateInterfaceConfig
+
 Prerequisites
 ---------------------
 
