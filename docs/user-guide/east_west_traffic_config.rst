@@ -6,14 +6,14 @@ East West Traffic Isolation
 
 **Create interfaces and interface config for each VM**
 
-    ::
-        MAC_H1PF0VF0=[VM1 vf0 mac address on first x86 host]
+ ::
+    MAC_H1PF0VF0=[VM1 vf0 mac address on first x86 host]
 
-        MAC_H1PF0VF1=[VM2 vf1 mac address on first x86 host]
+    MAC_H1PF0VF1=[VM2 vf1 mac address on first x86 host]
 
-        MAC_H2PF0VF0=[VM3 vf0 mac address on second x86 host]
+    MAC_H2PF0VF0=[VM3 vf0 mac address on second x86 host]
 
-        MAC_H2PF0VF1=[VM4 vf1 mac address on second x86 host]
+    MAC_H2PF0VF1=[VM4 vf1 mac address on second x86 host]
 
  - Interface on DPU-A::
 
