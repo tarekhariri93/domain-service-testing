@@ -9,7 +9,7 @@ Prerequisites
 
 Deployment
     Ensure you have deployed the system comprising the control plane, DPU and compute nodes. For the deployment procedure, refer to the OVN 
-    `Isolation Deployment guide <https://gitlab-master.nvidia.com/sdn/ovn-isolation-deployment>`.
+    `Isolation Deployment guide <https://gitlab-master.nvidia.com/sdn/ovn-isolation-deployment>`__.
 
 Setup grpc::
 
